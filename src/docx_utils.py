@@ -32,20 +32,21 @@ def _iter_tables(document: Document):
 
 
 def _get_merged_map(table) -> dict[Tuple[int, int], tuple[int, int]]:
-    # Map each logical grid position (r,c) to its top-left owner using table.cell(r,c)
+    # Group positions by underlying CT_Tc identity using row.cells to avoid API inconsistencies
+    groups_by_id: dict[int, list[tuple[int, int]]] = {}
+    for r_idx, row in enumerate(table.rows):
+        row_cells = list(row.cells)
+        for c_idx, cell in enumerate(row_cells):
+            key = id(cell._tc)
+            groups_by_id.setdefault(key, []).append((r_idx, c_idx))
+
     owner: dict[Tuple[int, int], tuple[int, int]] = {}
-    rows_count = len(table.rows)
-    cols_count = len(table.columns) if rows_count > 0 else 0
-    cell_owner_by_id: dict[int, tuple[int, int]] = {}
-    for r_idx in range(rows_count):
-        for c_idx in range(cols_count):
-            cell = table.cell(r_idx, c_idx)
-            key = id(cell)
-            tl = cell_owner_by_id.get(key)
-            if tl is None:
-                tl = (r_idx, c_idx)
-                cell_owner_by_id[key] = tl
-            owner[(r_idx, c_idx)] = tl
+    for key, positions in groups_by_id.items():
+        min_r = min(p[0] for p in positions)
+        min_c = min(p[1] for p in positions)
+        top_left = (min_r, min_c)
+        for (r, c) in positions:
+            owner[(r, c)] = top_left
     return owner
 
 
@@ -80,9 +81,16 @@ def extract_table_cell_texts(doc_path: Path) -> list[CellText]:
                 # Build combined text across positions in the merged rectangle
                 rs, cs, re_idx, ce_idx = rect
                 parts: list[str] = []
+                seen_cells: set[int] = set()
                 for rr in range(rs, re_idx + 1):
+                    row_cells = list(table.rows[rr].cells)
                     for cc in range(cs, ce_idx + 1):
-                        parts.append(table.cell(rr, cc).text)
+                        cell_obj = row_cells[cc]
+                        key = id(cell_obj._tc)
+                        if key in seen_cells:
+                            continue
+                        seen_cells.add(key)
+                        parts.append(cell_obj.text)
                 text = _normalize_whitespace("\n".join(parts))
 
                 results.append(
