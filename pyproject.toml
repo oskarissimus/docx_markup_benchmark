@@ -1,7 +1,27 @@
 [project]
 name = "docx-markup-benchmark"
 version = "0.1.0"
-description = "Add your description here"
+description = "CLI tool to evaluate DOCX markup placement in tables"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "python-docx>=1.1.0",
+    "pdf2image>=1.17.0",
+    "pillow>=10.3.0",
+]
+
+[project.scripts]
+docx-markup-eval = "src.cli:main"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+

@@ -1,5 +1,6 @@
 def main():
-    print("Hello from docx-markup-benchmark!")
+    from src.cli import main as cli_main
+    cli_main()
 
 
 if __name__ == "__main__":
